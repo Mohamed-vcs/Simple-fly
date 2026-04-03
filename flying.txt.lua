@@ -8,15 +8,12 @@ local RunService = game:GetService("RunService")
 
 -- GUI
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "FlyUI"
 
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0, 240, 0, 160)
 frame.Position = UDim2.new(0, 20, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
-frame.Active = true
-frame.Draggable = true
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", frame)
 
 local gradient = Instance.new("UIGradient", frame)
 
@@ -25,7 +22,6 @@ local minimize = Instance.new("TextButton", frame)
 minimize.Size = UDim2.new(0, 25, 0, 25)
 minimize.Position = UDim2.new(1, -30, 0, 5)
 minimize.Text = "-"
-minimize.BackgroundColor3 = Color3.fromRGB(60,60,60)
 Instance.new("UICorner", minimize)
 
 -- Toggle Fly
@@ -81,11 +77,6 @@ UIS.InputBegan:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.S then moveDir += Vector3.new(0,0,1) end
 	if input.KeyCode == Enum.KeyCode.A then moveDir += Vector3.new(-1,0,0) end
 	if input.KeyCode == Enum.KeyCode.D then moveDir += Vector3.new(1,0,0) end
-	
-	-- Toggle UI with F
-	if input.KeyCode == Enum.KeyCode.F then
-		gui.Enabled = not gui.Enabled
-	end
 end)
 
 UIS.InputEnded:Connect(function(input)
@@ -95,7 +86,7 @@ UIS.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.D then moveDir -= Vector3.new(1,0,0) end
 end)
 
--- Minimize logic
+-- Minimize
 minimize.MouseButton1Click:Connect(function()
 	minimized = not minimized
 	
@@ -121,7 +112,6 @@ toggle.MouseButton1Click:Connect(function()
 	if flying then
 		toggle.Text = "Fly: ON"
 		
-		-- HARD FREEZE
 		humanoid.PlatformStand = true
 		
 		for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
