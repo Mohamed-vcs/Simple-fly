@@ -1,53 +1,72 @@
 local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
+
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 -- GUI
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "RGBFlyUI"
 
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 200, 0, 150)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 240, 0, 160)
 frame.Position = UDim2.new(0, 20, 0, 20)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
-local toggleBtn = Instance.new("TextButton", frame)
-toggleBtn.Size = UDim2.new(1, 0, 0, 40)
-toggleBtn.Text = "Fly: OFF"
-toggleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+-- Gradient
+local gradient = Instance.new("UIGradient", frame)
 
+-- Toggle Button
+local toggle = Instance.new("TextButton", frame)
+toggle.Size = UDim2.new(1, -20, 0, 40)
+toggle.Position = UDim2.new(0, 10, 0, 10)
+toggle.Text = "Fly: OFF"
+toggle.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 8)
+
+-- Speed Label
 local speedLabel = Instance.new("TextLabel", frame)
-speedLabel.Position = UDim2.new(0, 0, 0, 45)
-speedLabel.Size = UDim2.new(1, 0, 0, 20)
+speedLabel.Position = UDim2.new(0, 10, 0, 60)
+speedLabel.Size = UDim2.new(1, -20, 0, 20)
 speedLabel.Text = "Speed: 50"
-speedLabel.BackgroundTransparency = 1
 speedLabel.TextColor3 = Color3.new(1,1,1)
+speedLabel.BackgroundTransparency = 1
 
 -- Slider Bar
 local sliderBar = Instance.new("Frame", frame)
-sliderBar.Position = UDim2.new(0.1, 0, 0, 80)
-sliderBar.Size = UDim2.new(0.8, 0, 0, 10)
-sliderBar.BackgroundColor3 = Color3.fromRGB(80,80,80)
+sliderBar.Position = UDim2.new(0, 10, 0, 90)
+sliderBar.Size = UDim2.new(1, -20, 0, 12)
+sliderBar.BackgroundColor3 = Color3.fromRGB(50,50,70)
+Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(1,0)
 
--- Slider Knob
-local sliderKnob = Instance.new("Frame", sliderBar)
-sliderKnob.Size = UDim2.new(0, 10, 0, 20)
-sliderKnob.Position = UDim2.new(0.5, -5, -0.5, 0)
-sliderKnob.BackgroundColor3 = Color3.fromRGB(200,200,200)
+-- Fill
+local fill = Instance.new("Frame", sliderBar)
+fill.Size = UDim2.new(0.5, 0, 1, 0)
+Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
+
+-- Knob
+local knob = Instance.new("Frame", sliderBar)
+knob.Size = UDim2.new(0, 16, 0, 16)
+knob.Position = UDim2.new(0.5, -8, 0.5, -8)
+knob.BackgroundColor3 = Color3.fromRGB(255,255,255)
+Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
 
 -- Variables
 local flying = false
-local speed = 50
+local targetSpeed = 50
+local currentSpeed = 0
 local maxSpeed = 100
+local accel = 2
+
 local dragging = false
+local moveDir = Vector3.zero
 
 local bodyVelocity
 local bodyGyro
 
-local moveDir = Vector3.zero
-
--- Movement keys
+-- Movement
 UIS.InputBegan:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.W then moveDir += Vector3.new(0,0,-1) end
 	if input.KeyCode == Enum.KeyCode.S then moveDir += Vector3.new(0,0,1) end
@@ -62,12 +81,13 @@ UIS.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.D then moveDir -= Vector3.new(1,0,0) end
 end)
 
--- Toggle Fly
-toggleBtn.MouseButton1Click:Connect(function()
+-- Toggle
+toggle.MouseButton1Click:Connect(function()
 	flying = not flying
-	toggleBtn.Text = flying and "Fly: ON" or "Fly: OFF"
 	
 	if flying then
+		toggle.Text = "Fly: ON"
+		
 		bodyVelocity = Instance.new("BodyVelocity")
 		bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
 		bodyVelocity.Parent = humanoidRootPart
@@ -77,21 +97,27 @@ toggleBtn.MouseButton1Click:Connect(function()
 		bodyGyro.P = 1e4
 		bodyGyro.Parent = humanoidRootPart
 	else
+		toggle.Text = "Fly: OFF"
+		
 		if bodyVelocity then bodyVelocity:Destroy() end
 		if bodyGyro then bodyGyro:Destroy() end
+		
+		currentSpeed = 0
 	end
 end)
 
--- Slider logic
-local function updateSlider(inputX)
+-- Slider
+local function updateSlider(x)
 	local barX = sliderBar.AbsolutePosition.X
-	local barWidth = sliderBar.AbsoluteSize.X
+	local width = sliderBar.AbsoluteSize.X
 	
-	local alpha = math.clamp((inputX - barX) / barWidth, 0, 1)
-	sliderKnob.Position = UDim2.new(alpha, -5, -0.5, 0)
+	local alpha = math.clamp((x - barX)/width, 0, 1)
 	
-	speed = math.floor(alpha * maxSpeed)
-	speedLabel.Text = "Speed: " .. speed
+	fill.Size = UDim2.new(alpha, 0, 1, 0)
+	knob.Position = UDim2.new(alpha, -8, 0.5, -8)
+	
+	targetSpeed = math.floor(alpha * maxSpeed)
+	speedLabel.Text = "Speed: " .. targetSpeed
 end
 
 sliderBar.InputBegan:Connect(function(input)
@@ -113,19 +139,35 @@ UIS.InputEnded:Connect(function(input)
 	end
 end)
 
--- Fly loop
-RunService.RenderStepped:Connect(function()
+-- RGB Animation
+local hue = 0
+
+RunService.RenderStepped:Connect(function(dt)
+	hue = (hue + dt * 0.2) % 1
+	
+	local color1 = Color3.fromHSV(hue, 1, 1)
+	local color2 = Color3.fromHSV((hue + 0.2) % 1, 1, 1)
+	
+	gradient.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, color1),
+		ColorSequenceKeypoint.new(1, color2)
+	}
+	
+	toggle.BackgroundColor3 = color1
+	fill.BackgroundColor3 = color2
+	
+	-- Fly system
 	if flying and bodyVelocity and bodyGyro then
 		local cam = workspace.CurrentCamera
-		local direction = (cam.CFrame:VectorToWorldSpace(moveDir))
 		
+		currentSpeed = currentSpeed + (targetSpeed - currentSpeed) * math.clamp(accel * dt, 0, 1)
+		
+		local direction = Vector3.zero
 		if moveDir.Magnitude > 0 then
-			direction = direction.Unit
-		else
-			direction = Vector3.zero
+			direction = cam.CFrame:VectorToWorldSpace(moveDir).Unit
 		end
 		
-		bodyVelocity.Velocity = direction * speed
+		bodyVelocity.Velocity = direction * currentSpeed
 		bodyGyro.CFrame = cam.CFrame
 	end
 end)
