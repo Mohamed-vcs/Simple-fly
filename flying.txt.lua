@@ -1,9 +1,14 @@
 local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
+local humanoid = char:WaitForChild("Humanoid")
 
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+
+-- Animation control
+local animateScript = char:FindFirstChild("Animate")
+local savedAnimateState = true
 
 -- GUI
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -15,10 +20,8 @@ frame.Position = UDim2.new(0, 20, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
--- Gradient
 local gradient = Instance.new("UIGradient", frame)
 
--- Toggle Button
 local toggle = Instance.new("TextButton", frame)
 toggle.Size = UDim2.new(1, -20, 0, 40)
 toggle.Position = UDim2.new(0, 10, 0, 10)
@@ -26,7 +29,6 @@ toggle.Text = "Fly: OFF"
 toggle.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 8)
 
--- Speed Label
 local speedLabel = Instance.new("TextLabel", frame)
 speedLabel.Position = UDim2.new(0, 10, 0, 60)
 speedLabel.Size = UDim2.new(1, -20, 0, 20)
@@ -34,19 +36,16 @@ speedLabel.Text = "Speed: 50"
 speedLabel.TextColor3 = Color3.new(1,1,1)
 speedLabel.BackgroundTransparency = 1
 
--- Slider Bar
 local sliderBar = Instance.new("Frame", frame)
 sliderBar.Position = UDim2.new(0, 10, 0, 90)
 sliderBar.Size = UDim2.new(1, -20, 0, 12)
 sliderBar.BackgroundColor3 = Color3.fromRGB(50,50,70)
 Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(1,0)
 
--- Fill
 local fill = Instance.new("Frame", sliderBar)
 fill.Size = UDim2.new(0.5, 0, 1, 0)
 Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
 
--- Knob
 local knob = Instance.new("Frame", sliderBar)
 knob.Size = UDim2.new(0, 16, 0, 16)
 knob.Position = UDim2.new(0.5, -8, 0.5, -8)
@@ -81,12 +80,24 @@ UIS.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.D then moveDir -= Vector3.new(1,0,0) end
 end)
 
--- Toggle
+-- Toggle Fly
 toggle.MouseButton1Click:Connect(function()
 	flying = not flying
 	
 	if flying then
 		toggle.Text = "Fly: ON"
+		
+		-- Freeze animations
+		if animateScript then
+			savedAnimateState = animateScript.Enabled
+			animateScript.Enabled = false
+		end
+		
+		for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+			track:Stop()
+		end
+		
+		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 		
 		bodyVelocity = Instance.new("BodyVelocity")
 		bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
@@ -96,8 +107,16 @@ toggle.MouseButton1Click:Connect(function()
 		bodyGyro.MaxTorque = Vector3.new(1e5,1e5,1e5)
 		bodyGyro.P = 1e4
 		bodyGyro.Parent = humanoidRootPart
+		
 	else
 		toggle.Text = "Fly: OFF"
+		
+		-- Restore animations
+		if animateScript then
+			animateScript.Enabled = savedAnimateState
+		end
+		
+		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 		
 		if bodyVelocity then bodyVelocity:Destroy() end
 		if bodyGyro then bodyGyro:Destroy() end
@@ -139,10 +158,11 @@ UIS.InputEnded:Connect(function(input)
 	end
 end)
 
--- RGB Animation
+-- RGB + Fly loop
 local hue = 0
 
 RunService.RenderStepped:Connect(function(dt)
+	-- RGB animation
 	hue = (hue + dt * 0.2) % 1
 	
 	local color1 = Color3.fromHSV(hue, 1, 1)
@@ -156,7 +176,7 @@ RunService.RenderStepped:Connect(function(dt)
 	toggle.BackgroundColor3 = color1
 	fill.BackgroundColor3 = color2
 	
-	-- Fly system
+	-- Smooth fly
 	if flying and bodyVelocity and bodyGyro then
 		local cam = workspace.CurrentCamera
 		
