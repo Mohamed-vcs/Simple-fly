@@ -13,6 +13,8 @@ local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0, 240, 0, 160)
 frame.Position = UDim2.new(0, 20, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
+frame.Active = false -- Lock frame from being dragged
+frame.Draggable = false -- Disable dragging completely
 Instance.new("UICorner", frame)
 
 local gradient = Instance.new("UIGradient", frame)
@@ -45,6 +47,7 @@ local sliderBar = Instance.new("Frame", frame)
 sliderBar.Position = UDim2.new(0, 10, 0, 110)
 sliderBar.Size = UDim2.new(1, -20, 0, 12)
 sliderBar.BackgroundColor3 = Color3.fromRGB(50,50,70)
+sliderBar.Active = false -- Prevent slider from affecting frame
 Instance.new("UICorner", sliderBar)
 
 local fill = Instance.new("Frame", sliderBar)
@@ -86,7 +89,7 @@ UIS.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.D then moveDir -= Vector3.new(1,0,0) end
 end)
 
--- Minimize
+-- Minimize (Click button only - no F keybind)
 minimize.MouseButton1Click:Connect(function()
 	minimized = not minimized
 	
